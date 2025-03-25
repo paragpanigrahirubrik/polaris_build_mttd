@@ -1,4 +1,5 @@
 let MTTD_data = {};
+let sortedBuildKeys = [];
 let currentPage = 1;
 const buildsPerPage = 20;
 let totalBuilds = 0;
@@ -9,13 +10,13 @@ const ttdDataLast60Days = [];
 
 async function fetchMTTDData() {
     try {
-        console.log("Fetching data from API hs")
-        const response = await fetch('https://10.0.41.79:5000/all');
+        console.log("Fetching data from API");
+        const response = await fetch('https://10.0.41.79:5000/all');  // Adjust the URL if necessary
         if (!response.ok) {
             throw new Error('Network response was not ok ' + response.statusText);
         }
         const data = await response.json();
-        console.log("Got data!")
+        console.log("Got data!");
         return data;
     } catch (error) {
         console.error('There has been a problem with your fetch operation:', error);
@@ -24,7 +25,7 @@ async function fetchMTTDData() {
 
 function calculateTTD(startTime, endTime) {
     if (!startTime || startTime === 'N/A') {
-        return { ttd: 'N/A', diffMs: NaN }; // No valid start time
+        return { ttd: 'N/A', diffMs: NaN };
     }
 
     const startDate = new Date(startTime);
@@ -33,7 +34,7 @@ function calculateTTD(startTime, endTime) {
     const diffMs = endDate - startDate;
 
     if (diffMs < 0) {
-        return { ttd: 'N/A', diffMs: NaN }; // Special case for negative intervals
+        return { ttd: 'N/A', diffMs: NaN };
     }
 
     const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
@@ -63,8 +64,8 @@ function percentile(arr, percentile) {
 
 function formatTTD(ttdInMs) {
     const diffHrs = Math.floor(ttdInMs / (1000 * 60 * 60));
-    const diffMins = Math.floor((ttdInMs % (1000 * 60 * 60)) / (1000 * 60));
-    const diffSecs = Math.floor((ttdInMs % (1000 * 60)) / 1000);
+    const diffMins = Math.floor((diffHrs % (1000 * 60 * 60)) / (1000 * 60));
+    const diffSecs = Math.floor((diffMins % (1000 * 60)) / 1000);
     return `${diffHrs} hours, ${diffMins} minutes, ${diffSecs} seconds`;
 }
 
@@ -88,7 +89,7 @@ function generateTable(page = 1) {
     tableBody.innerHTML = ''; // Clear existing table rows first
     const startIdx = (page - 1) * buildsPerPage;
     const endIdx = Math.min(startIdx + buildsPerPage, totalBuilds);
-    const buildsToShow = Object.keys(MTTD_data).slice(startIdx, endIdx);
+    const buildsToShow = sortedBuildKeys.slice(startIdx, endIdx);
 
     buildsToShow.forEach(key => {
         const data = MTTD_data[key];
@@ -209,7 +210,8 @@ function toggleDescription() {
 async function load_content() {
     MTTD_data = await fetchMTTDData();
     if (MTTD_data) {
-        totalBuilds = Object.keys(MTTD_data).length;
+        sortedBuildKeys = Object.keys(MTTD_data).sort((a, b) => parseInt(b) - parseInt(a)); // Sort keys numerically in descending order
+        totalBuilds = sortedBuildKeys.length;
         totalPages = Math.ceil(totalBuilds / buildsPerPage);
         generateTable(currentPage);
     }
