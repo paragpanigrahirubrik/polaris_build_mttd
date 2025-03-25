@@ -5,7 +5,6 @@ let totalBuilds = 0;
 let totalPages = 0;
 let ttdDataLast14Days = [];
 let ttdDataLast30Days = [];
-let ttdDataLast60Days = [];
 
 async function fetchMTTDData() {
     try {
@@ -20,9 +19,9 @@ async function fetchMTTDData() {
     }
 }
 
-function calculateTTD(startTime, endTime) {
+function calculateTTD(startTime, endTime, url) {
     if (!startTime || startTime === 'N/A') {
-        return { ttd: 'N/A', diffMs: NaN }; // No valid start time
+        return { ttd: 'N/A', diffMs: NaN, url: url, failTime: endTime }; // No valid start time
     }
 
     const startDate = new Date(startTime);
@@ -31,7 +30,7 @@ function calculateTTD(startTime, endTime) {
     const diffMs = endDate - startDate;
 
     if (diffMs < 0) {
-        return { ttd: 'N/A', diffMs: NaN }; // Special case for negative intervals
+        return { ttd: 'N/A', diffMs: NaN, url: url, failTime: endTime }; // Special case for negative intervals
     }
 
     const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
@@ -39,7 +38,7 @@ function calculateTTD(startTime, endTime) {
     const diffSecs = Math.floor((diffMs % (1000 * 60)) / 1000);
     const ttdFormatted = `${diffHrs} hours, ${diffMins} minutes, ${diffSecs} seconds`;
 
-    return { ttd: ttdFormatted, diffMs: diffMs };
+    return { ttd: ttdFormatted, diffMs: diffMs, url: url, failTime: endTime };
 }
 
 function formatDateTime(dateString) {
@@ -81,17 +80,57 @@ function updateSummary(data, meanId, p75Id, p90Id) {
     document.getElementById(p90Id).textContent = formatTTD(percentile(ttData, 90));
 }
 
+function updateTTDSummaries() {
+    ttdDataLast14Days = [];
+    ttdDataLast30Days = [];
+
+    const today = new Date();
+    const fourteenDaysAgo = new Date(today);
+    fourteenDaysAgo.setDate(today.getDate() - 14);
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+
+    Object.keys(MTTD_data).forEach(key => {
+        const data = MTTD_data[key];
+        let ttdData;
+        if (data.breaking_time_readable && data.breaking_time_readable !== 'N/A') {
+            ttdData = calculateTTD(data.breaking_time_readable, data.build_fail_time, data.url);
+        } else {
+            ttdData = calculateTTD(data.build_time, data.build_fail_time, data.url);
+        }
+
+        if (!isNaN(ttdData.diffMs)) {
+            const buildFailDate = new Date(data.build_fail_time);
+
+            if (buildFailDate >= fourteenDaysAgo) {
+                ttdDataLast14Days.push(ttdData);
+            }
+            if (buildFailDate >= thirtyDaysAgo) {
+                ttdDataLast30Days.push(ttdData);
+            }
+        }
+    });
+
+    updateSummary(ttdDataLast14Days, 'mean-ttd-14', 'p75-ttd-14', 'p90-ttd-14');
+    updateSummary(ttdDataLast30Days, 'mean-ttd-30', 'p75-ttd-30', 'p90-ttd-30');
+    console.log("ttdDataLast14Days")
+    console.log(ttdDataLast14Days)
+    console.log("ttdDataLast30Days")
+    console.log(ttdDataLast30Days)
+}
+
 function generateTable(page = 1) {
     const tableBody = document.getElementById('table-body');
     tableBody.innerHTML = ''; // Clear existing table rows first
+    const sortedDataKeys = Object.keys(MTTD_data).sort((a, b) => {
+        const dateA = new Date(MTTD_data[a].build_fail_time);
+        const dateB = new Date(MTTD_data[b].build_fail_time);
+        return dateB - dateA;
+    });
+
     const startIdx = (page - 1) * buildsPerPage;
     const endIdx = Math.min(startIdx + buildsPerPage, totalBuilds);
-    const buildsToShow = Object.keys(MTTD_data).slice(startIdx, endIdx);
-
-    // Clear the arrays
-    ttdDataLast14Days = [];
-    ttdDataLast30Days = [];
-    ttdDataLast60Days = [];
+    const buildsToShow = sortedDataKeys.slice(startIdx, endIdx);
 
     buildsToShow.forEach(key => {
         const data = MTTD_data[key];
@@ -134,35 +173,12 @@ function generateTable(page = 1) {
         const ttdCell = document.createElement('td');
         let ttdData;
         if (data.breaking_time_readable && data.breaking_time_readable !== 'N/A') {
-            ttdData = calculateTTD(data.breaking_time_readable, data.build_fail_time);
+            ttdData = calculateTTD(data.breaking_time_readable, data.build_fail_time, data.url);
         } else {
-            ttdData = calculateTTD(data.build_time, data.build_fail_time);
+            ttdData = calculateTTD(data.build_time, data.build_fail_time, data.url);
         }
 
-        if (!isNaN(ttdData.diffMs)) {
-            // Record valid TTD values within the last 14, 30 days and 2 months
-            const today = new Date();
-            const fourteenDaysAgo = new Date(today);
-            fourteenDaysAgo.setDate(today.getDate() - 14);
-            const thirtyDaysAgo = new Date(today);
-            thirtyDaysAgo.setDate(today.getDate() - 30);
-            const sixtyDaysAgo = new Date(today);
-            sixtyDaysAgo.setMonth(today.getMonth() - 2);
-            const buildFailDate = new Date(data.build_fail_time);
-
-            if (buildFailDate >= fourteenDaysAgo) {
-                ttdDataLast14Days.push(ttdData);
-            }
-            if (buildFailDate >= thirtyDaysAgo) {
-                ttdDataLast30Days.push(ttdData);
-            }
-            if (buildFailDate >= sixtyDaysAgo) {
-                ttdDataLast60Days.push(ttdData);
-            }
-            ttdCell.textContent = ttdData.ttd;
-        } else {
-            ttdCell.textContent = 'N/A';
-        }
+        ttdCell.textContent = ttdData.ttd;
         row.appendChild(ttdCell);
 
         const offendingPRFoundCell = document.createElement('td');
@@ -173,9 +189,6 @@ function generateTable(page = 1) {
     });
 
     updatePaginationControls(page);
-    updateSummary(ttdDataLast14Days, 'mean-ttd-14', 'p75-ttd-14', 'p90-ttd-14');
-    updateSummary(ttdDataLast30Days, 'mean-ttd-30', 'p75-ttd-30', 'p90-ttd-30');
-    updateSummary(ttdDataLast60Days, 'mean-ttd-60', 'p75-ttd-60', 'p90-ttd-60');
 }
 
 function updatePaginationControls(page) {
@@ -214,6 +227,7 @@ async function load_content() {
     if (MTTD_data) {
         totalBuilds = Object.keys(MTTD_data).length;
         totalPages = Math.ceil(totalBuilds / buildsPerPage);
+        updateTTDSummaries();
         generateTable(currentPage);
     }
 }
