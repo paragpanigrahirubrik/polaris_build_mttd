@@ -9,11 +9,13 @@ const ttdDataLast60Days = [];
 
 async function fetchMTTDData() {
     try {
+        console.log("Fetching data from API hs")
         const response = await fetch('http://10.0.41.79:5000/all');
         if (!response.ok) {
             throw new Error('Network response was not ok ' + response.statusText);
         }
         const data = await response.json();
+        console.log("Got data!")
         return data;
     } catch (error) {
         console.error('There has been a problem with your fetch operation:', error);
@@ -50,8 +52,7 @@ function formatDateTime(dateString) {
 
 function mean(arr) {
     const total = arr.reduce((acc, curr) => acc + curr, 0);
-    const mean = total / arr.length;
-    return mean;
+    return total / arr.length;
 }
 
 function percentile(arr, percentile) {
@@ -214,22 +215,7 @@ async function load_content() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', (event) => {
     load_content();
     toggleDescription();
-});
-
-document.addEventListener('DOMContentLoaded', (event) => {
-    const descriptionToggle = document.querySelector('.description-toggle');
-    const descriptionContent = document.querySelector('.description-content');
-
-    descriptionToggle.addEventListener('click', () => {
-        if (descriptionContent.style.display === 'block') {
-            descriptionContent.style.display = 'none';
-            descriptionToggle.textContent = 'Show Description ▼';
-        } else {
-            descriptionContent.style.display = 'block';
-            descriptionToggle.textContent = 'Hide Description ▲';
-        }
-    });
 });
