@@ -13,7 +13,9 @@
     <div class="description-box">
         <button class="description-toggle">Show Description ▼</button>
         <div class="description-content">
-            <p>Overview of Mean Time to Detect (MTTD) data for various periods.</p>
+            <p>Overview of Mean Time to Detect (MTTD) data for failed polaris master builds.</p>
+            <p>This tracks time from time of commit for offending PR to build failure. If offending PR is not found, we fallback to the oldest commit being built in the job</p>
+            <p>There might be some builds which don't have any new commit being built. In that case the offending PR/commit field is N/A and TTD is just the build time.</p>
         </div>
     </div>
     <div class="ttd-summaries">
