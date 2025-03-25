@@ -10,7 +10,7 @@ const ttdDataLast60Days = [];
 async function fetchMTTDData() {
     try {
         console.log("Fetching data from API hs")
-        const response = await fetch('https://10.0.41.79:5000/all');
+        const response = await fetch('http://10.0.41.79:5000/all');
         if (!response.ok) {
             throw new Error('Network response was not ok ' + response.statusText);
         }
