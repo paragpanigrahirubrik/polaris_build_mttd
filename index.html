@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MTTD Data</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+    <h1>MTTD Data</h1>
+    <div class="description-box">
+        <button class="description-toggle">Show Description ▼</button>
+        <div class="description-content">
+            <!-- Add your description here -->
+            Overview of Mean Time to Detect (MTTD) data for various periods.
+        </div>
+    </div>
+    <div class="ttd-summaries">
+        <div class="ttd-summary">
+            <h2>Last 14 days</h2>
+            <p>Mean TTD: <span id="mean-ttd-14">Loading</span></p>
+            <p>P75 TTD: <span id="p75-ttd-14">Loading</span></p>
+            <p>P90 TTD: <span id="p90-ttd-14">Loading</span></p>
+        </div>
+        <div class="ttd-summary">
+            <h2>Last 30 days</h2>
+            <p>Mean TTD: <span id="mean-ttd-30">Loading</span></p>
+            <p>P75 TTD: <span id="p75-ttd-30">Loading</span></p>
+            <p>P90 TTD: <span id="p90-ttd-30">Loading</span></p>
+        </div>
+        <div class="ttd-summary">
+            <h2>Last 2 months</h2>
+            <p>Mean TTD: <span id="mean-ttd-60">Loading</span></p>
+            <p>P75 TTD: <span id="p75-ttd-60">Loading</span></p>
+            <p>P90 TTD: <span id="p90-ttd-60">Loading</span></p>
+        </div>
+    </div>
+    <table>
+        <thead>
+        <tr>
+            <th>Build Id</th>
+            <th>Offending Commit/PR</th>
+            <th>Offending Commit Time</th>
+            <th>Build Start Time</th>
+            <th>Build Fail Time</th>
+            <th>TTD</th>
+            <th>Offending PR Found?</th>
+        </tr>
+        </thead>
+        <tbody id="table-body">
+        <!-- Table data will be populated here -->
+        </tbody>
+    </table>
+    <div id="pagination-controls" class="pagination">
+        <!-- Pagination buttons will be populated here -->
+    </div>
+</div>
+<script src="script.js"></script>
+</body>
+</html>
