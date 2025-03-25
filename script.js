@@ -1,22 +1,19 @@
 let MTTD_data = {};
-let sortedBuildKeys = [];
 let currentPage = 1;
 const buildsPerPage = 20;
 let totalBuilds = 0;
 let totalPages = 0;
-const ttdDataLast14Days = [];
-const ttdDataLast30Days = [];
-const ttdDataLast60Days = [];
+let ttdDataLast14Days = [];
+let ttdDataLast30Days = [];
+let ttdDataLast60Days = [];
 
 async function fetchMTTDData() {
     try {
-        console.log("Fetching data from API");
-        const response = await fetch('https://10.0.41.79:5000/all');  // Adjust the URL if necessary
+        const response = await fetch('http://10.0.41.79:5000/all');
         if (!response.ok) {
             throw new Error('Network response was not ok ' + response.statusText);
         }
         const data = await response.json();
-        console.log("Got data!");
         return data;
     } catch (error) {
         console.error('There has been a problem with your fetch operation:', error);
@@ -25,7 +22,7 @@ async function fetchMTTDData() {
 
 function calculateTTD(startTime, endTime) {
     if (!startTime || startTime === 'N/A') {
-        return { ttd: 'N/A', diffMs: NaN };
+        return { ttd: 'N/A', diffMs: NaN }; // No valid start time
     }
 
     const startDate = new Date(startTime);
@@ -34,7 +31,7 @@ function calculateTTD(startTime, endTime) {
     const diffMs = endDate - startDate;
 
     if (diffMs < 0) {
-        return { ttd: 'N/A', diffMs: NaN };
+        return { ttd: 'N/A', diffMs: NaN }; // Special case for negative intervals
     }
 
     const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
@@ -64,8 +61,8 @@ function percentile(arr, percentile) {
 
 function formatTTD(ttdInMs) {
     const diffHrs = Math.floor(ttdInMs / (1000 * 60 * 60));
-    const diffMins = Math.floor((diffHrs % (1000 * 60 * 60)) / (1000 * 60));
-    const diffSecs = Math.floor((diffMins % (1000 * 60)) / 1000);
+    const diffMins = Math.floor((ttdInMs % (1000 * 60 * 60)) / (1000 * 60));
+    const diffSecs = Math.floor((ttdInMs % (1000 * 60)) / 1000);
     return `${diffHrs} hours, ${diffMins} minutes, ${diffSecs} seconds`;
 }
 
@@ -89,7 +86,12 @@ function generateTable(page = 1) {
     tableBody.innerHTML = ''; // Clear existing table rows first
     const startIdx = (page - 1) * buildsPerPage;
     const endIdx = Math.min(startIdx + buildsPerPage, totalBuilds);
-    const buildsToShow = sortedBuildKeys.slice(startIdx, endIdx);
+    const buildsToShow = Object.keys(MTTD_data).slice(startIdx, endIdx);
+
+    // Clear the arrays
+    ttdDataLast14Days = [];
+    ttdDataLast30Days = [];
+    ttdDataLast60Days = [];
 
     buildsToShow.forEach(key => {
         const data = MTTD_data[key];
@@ -140,21 +142,21 @@ function generateTable(page = 1) {
         if (!isNaN(ttdData.diffMs)) {
             // Record valid TTD values within the last 14, 30 days and 2 months
             const today = new Date();
-            const fourteenDaysAgo = new Date();
+            const fourteenDaysAgo = new Date(today);
             fourteenDaysAgo.setDate(today.getDate() - 14);
-            const thirtyDaysAgo = new Date();
+            const thirtyDaysAgo = new Date(today);
             thirtyDaysAgo.setDate(today.getDate() - 30);
-            const sixtyDaysAgo = new Date();
+            const sixtyDaysAgo = new Date(today);
             sixtyDaysAgo.setMonth(today.getMonth() - 2);
             const buildFailDate = new Date(data.build_fail_time);
 
-            if (buildFailDate > fourteenDaysAgo) {
+            if (buildFailDate >= fourteenDaysAgo) {
                 ttdDataLast14Days.push(ttdData);
             }
-            if (buildFailDate > thirtyDaysAgo) {
+            if (buildFailDate >= thirtyDaysAgo) {
                 ttdDataLast30Days.push(ttdData);
             }
-            if (buildFailDate > sixtyDaysAgo) {
+            if (buildFailDate >= sixtyDaysAgo) {
                 ttdDataLast60Days.push(ttdData);
             }
             ttdCell.textContent = ttdData.ttd;
@@ -210,8 +212,7 @@ function toggleDescription() {
 async function load_content() {
     MTTD_data = await fetchMTTDData();
     if (MTTD_data) {
-        sortedBuildKeys = Object.keys(MTTD_data).sort((a, b) => parseInt(b) - parseInt(a)); // Sort keys numerically in descending order
-        totalBuilds = sortedBuildKeys.length;
+        totalBuilds = Object.keys(MTTD_data).length;
         totalPages = Math.ceil(totalBuilds / buildsPerPage);
         generateTable(currentPage);
     }

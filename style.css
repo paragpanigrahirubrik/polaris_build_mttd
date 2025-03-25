@@ -145,3 +145,8 @@ a:hover {
 .description-content p {
     margin: 0;
 }
+
+/* Hide the 2 months data summary */
+.hide-ttd-summary {
+    display: none;
+}
